@@ -240,7 +240,7 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## 📞 Support
 
-For support, email support@smartsign.com or join our community Discord.
+For support, email john.turner@smartsign.com or join our community Discord.
 
 ---
 

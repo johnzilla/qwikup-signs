@@ -112,7 +112,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                         <Input
                           id="lastName"
                           type="text"
-                          placeholder="Doe"
+                          placeholder="Turner"
                           className="pl-10"
                           required
                         />
@@ -188,7 +188,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                     <Input
                       id="confirmPassword"
                       type="password"
-                      placeholder="••••••••"
+                      placeholder="john.turner@example.com"
                       className="pl-10"
                       required
                     />
