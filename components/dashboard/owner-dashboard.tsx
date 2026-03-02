@@ -1,80 +1,156 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Plus, 
-  QrCode, 
-  MapPin, 
-  TrendingUp, 
-  AlertTriangle, 
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Plus,
+  QrCode,
+  MapPin,
+  TrendingUp,
   CheckCircle,
-  Users,
-  DollarSign,
-  Download,
   Eye,
   Edit,
-  Trash2
+  Loader2,
 } from 'lucide-react';
-import Link from 'next/link';
 import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import { QRCodeDialog } from '@/components/dashboard/qr-code-dialog';
+import { createClient } from '@/lib/supabase/client';
+import { generateCampaignQRCode } from '@/lib/qr-generator';
+interface Campaign {
+  id: string;
+  owner_id: string;
+  name: string;
+  description: string | null;
+  bounty_amount: number;
+  qr_code: string;
+  status: string;
+  signs_deployed: number;
+  signs_reported: number;
+  signs_removed: number;
+  total_bounty_paid: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export function OwnerDashboard() {
-  const [campaigns, setCampaigns] = useState([
-    {
-      id: 1,
-      name: 'Summer Sale 2024',
-      status: 'active',
-      signsDeployed: 45,
-      signsReported: 3,
-      signsRemoved: 2,
-      bountyAmount: 5.00,
-      createdAt: '2024-01-15',
-      qrCode: 'QR_SUMMER_2024'
-    },
-    {
-      id: 2,
-      name: 'Black Friday Campaign',
-      status: 'completed',
-      signsDeployed: 120,
-      signsReported: 8,
-      signsRemoved: 8,
-      bountyAmount: 7.50,
-      createdAt: '2024-01-10',
-      qrCode: 'QR_BLACKFRIDAY_2024'
-    }
-  ]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [qrDialogCampaign, setQrDialogCampaign] = useState<Campaign | null>(null);
 
-  const stats = {
-    totalCampaigns: campaigns.length,
-    activeCampaigns: campaigns.filter(c => c.status === 'active').length,
-    totalSignsDeployed: campaigns.reduce((sum, c) => sum + c.signsDeployed, 0),
-    totalSignsRemoved: campaigns.reduce((sum, c) => sum + c.signsRemoved, 0),
-    complianceRate: 94
+  const loadCampaigns = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('owner_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (data) setCampaigns(data);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadCampaigns();
+  }, [loadCampaigns]);
+
+  const handleCreateCampaign = async (formData: FormData) => {
+    setCreating(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+    const bountyAmount = parseFloat(formData.get('bountyAmount') as string) || 5.0;
+
+    const { error } = await supabase.from('campaigns').insert({
+      owner_id: user.id,
+      name,
+      description: description || null,
+      bounty_amount: bountyAmount,
+      qr_code: generateCampaignQRCode(name),
+    });
+
+    setCreating(false);
+    if (!error) {
+      setCreateDialogOpen(false);
+      loadCampaigns();
+    }
   };
+
+  const totalDeployed = campaigns.reduce((sum, c) => sum + c.signs_deployed, 0);
+  const totalRemoved = campaigns.reduce((sum, c) => sum + c.signs_removed, 0);
+  const complianceRate = totalDeployed > 0
+    ? Math.round(((totalDeployed - totalRemoved) / totalDeployed) * 100)
+    : 100;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardHeader userType="owner" />
-      
+
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">Manage your sign campaigns and track performance</p>
           </div>
-          <Button asChild>
-            <Link href="/dashboard/campaigns/new">
-              <Plus className="w-4 h-4 mr-2" />
-              New Campaign
-            </Link>
-          </Button>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                New Campaign
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create Campaign</DialogTitle>
+                <DialogDescription>
+                  Set up a new sign campaign with a bounty for cleanup.
+                </DialogDescription>
+              </DialogHeader>
+              <form action={handleCreateCampaign} className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Campaign Name</Label>
+                  <Input id="name" name="name" required placeholder="e.g. Summer Sale 2026" />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea id="description" name="description" placeholder="Campaign details..." rows={3} />
+                </div>
+                <div>
+                  <Label htmlFor="bountyAmount">Bounty Amount ($)</Label>
+                  <Input id="bountyAmount" name="bountyAmount" type="number" min="1" step="0.50" defaultValue="5.00" required />
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={creating}>
+                    {creating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...</> : 'Create Campaign'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Stats Cards */}
@@ -84,9 +160,9 @@ export function OwnerDashboard() {
               <CardTitle className="text-sm font-medium text-gray-600">Total Campaigns</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{stats.totalCampaigns}</div>
+              <div className="text-2xl font-bold text-gray-900">{campaigns.length}</div>
               <p className="text-xs text-gray-500 mt-1">
-                {stats.activeCampaigns} active
+                {campaigns.filter(c => c.status === 'active').length} active
               </p>
             </CardContent>
           </Card>
@@ -96,10 +172,10 @@ export function OwnerDashboard() {
               <CardTitle className="text-sm font-medium text-gray-600">Signs Deployed</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{stats.totalSignsDeployed}</div>
+              <div className="text-2xl font-bold text-gray-900">{totalDeployed}</div>
               <p className="text-xs text-green-600 mt-1">
                 <TrendingUp className="w-3 h-3 inline mr-1" />
-                12% increase
+                Across all campaigns
               </p>
             </CardContent>
           </Card>
@@ -109,9 +185,9 @@ export function OwnerDashboard() {
               <CardTitle className="text-sm font-medium text-gray-600">Signs Removed</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{stats.totalSignsRemoved}</div>
+              <div className="text-2xl font-bold text-gray-900">{totalRemoved}</div>
               <p className="text-xs text-gray-500 mt-1">
-                {((stats.totalSignsRemoved / stats.totalSignsDeployed) * 100).toFixed(1)}% of deployed
+                {totalDeployed > 0 ? ((totalRemoved / totalDeployed) * 100).toFixed(1) : 0}% of deployed
               </p>
             </CardContent>
           </Card>
@@ -121,17 +197,16 @@ export function OwnerDashboard() {
               <CardTitle className="text-sm font-medium text-gray-600">Compliance Rate</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.complianceRate}%</div>
-              <Progress value={stats.complianceRate} className="mt-2" />
+              <div className="text-2xl font-bold text-green-600">{complianceRate}%</div>
+              <Progress value={complianceRate} className="mt-2" />
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content */}
+        {/* Campaigns List */}
         <Tabs defaultValue="campaigns" className="space-y-6">
           <TabsList>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="map">Map View</TabsTrigger>
           </TabsList>
 
@@ -139,149 +214,93 @@ export function OwnerDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Campaign Management</CardTitle>
-                <CardDescription>
-                  Create and manage your sign campaigns
-                </CardDescription>
+                <CardDescription>Create and manage your sign campaigns</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {campaigns.map((campaign) => (
-                    <div key={campaign.id} className="border rounded-lg p-4 bg-white">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <h3 className="font-semibold text-lg">{campaign.name}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <Badge variant={campaign.status === 'active' ? 'default' : 'secondary'}>
-                              {campaign.status}
-                            </Badge>
-                            <span className="text-sm text-gray-500">
-                              Created {campaign.createdAt}
-                            </span>
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                  </div>
+                ) : campaigns.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <p className="mb-4">No campaigns yet. Create your first campaign to get started.</p>
+                    <Button onClick={() => setCreateDialogOpen(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      New Campaign
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {campaigns.map((campaign) => (
+                      <div key={campaign.id} className="border rounded-lg p-4 bg-white">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h3 className="font-semibold text-lg">{campaign.name}</h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant={campaign.status === 'active' ? 'default' : 'secondary'}>
+                                {campaign.status}
+                              </Badge>
+                              <span className="text-sm text-gray-500">
+                                Created {new Date(campaign.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {campaign.description && (
+                              <p className="text-sm text-gray-600 mt-2">{campaign.description}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" onClick={() => setQrDialogCampaign(campaign)}>
+                              <QrCode className="w-4 h-4 mr-2" />
+                              QR Code
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Edit className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline">
-                            <QrCode className="w-4 h-4 mr-2" />
-                            QR Code
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Edit className="w-4 h-4" />
-                          </Button>
+
+                        <Separator className="mb-3" />
+
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-500">Deployed</span>
+                            <div className="font-semibold">{campaign.signs_deployed}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Reported</span>
+                            <div className="font-semibold text-orange-600">{campaign.signs_reported}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Removed</span>
+                            <div className="font-semibold text-green-600">{campaign.signs_removed}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Bounty</span>
+                            <div className="font-semibold">${campaign.bounty_amount}</div>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500">Deployed</span>
-                          <div className="font-semibold">{campaign.signsDeployed}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Reported</span>
-                          <div className="font-semibold text-orange-600">{campaign.signsReported}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Removed</span>
-                          <div className="font-semibold text-green-600">{campaign.signsRemoved}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Bounty</span>
-                          <div className="font-semibold">${campaign.bountyAmount}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Performance Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Signs Deployed</span>
-                      <span className="font-semibold">{stats.totalSignsDeployed}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Signs Reported</span>
-                      <span className="font-semibold text-orange-600">11</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Signs Removed</span>
-                      <span className="font-semibold text-green-600">{stats.totalSignsRemoved}</span>
-                    </div>
-                    <Separator />
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Compliance Rate</span>
-                      <span className="font-semibold text-green-600">{stats.complianceRate}%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm">Sign removed on Main St</p>
-                        <p className="text-xs text-gray-500">2 hours ago</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <AlertTriangle className="w-4 h-4 text-orange-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm">Sign reported expired</p>
-                        <p className="text-xs text-gray-500">5 hours ago</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <MapPin className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm">New sign deployed</p>
-                        <p className="text-xs text-gray-500">1 day ago</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
 
           <TabsContent value="map" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Sign Locations</CardTitle>
-                <CardDescription>
-                  View all your deployed signs on the map
-                </CardDescription>
+                <CardDescription>View all your deployed signs on the map</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
                   <div className="text-center">
                     <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500">Interactive map will be displayed here</p>
-                    <p className="text-sm text-gray-400 mt-2">
-                      Shows deployed signs, reported signs, and active bounties
-                    </p>
+                    <p className="text-gray-500">Map integration coming soon</p>
                   </div>
                 </div>
               </CardContent>
@@ -289,6 +308,15 @@ export function OwnerDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {qrDialogCampaign && (
+        <QRCodeDialog
+          open={!!qrDialogCampaign}
+          onOpenChange={(open) => { if (!open) setQrDialogCampaign(null); }}
+          campaignId={qrDialogCampaign.id}
+          campaignName={qrDialogCampaign.name}
+        />
+      )}
     </div>
   );
 }

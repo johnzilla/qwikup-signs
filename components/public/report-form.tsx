@@ -8,34 +8,30 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  MapPin, 
-  Camera, 
-  CheckCircle, 
+import {
+  MapPin,
+  CheckCircle,
   AlertTriangle,
   Loader2,
   Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { createClient } from '@/lib/supabase/client';
 
 interface ReportFormProps {
   campaignId?: string;
   qrCode?: string;
 }
 
-export function ReportForm({ campaignId, qrCode }: ReportFormProps) {
+export function ReportForm({ qrCode }: ReportFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [location, setLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState('');
-  const [formData, setFormData] = useState({
-    description: '',
-    email: '',
-    phone: ''
-  });
+  const [campaignName, setCampaignName] = useState<string | null>(null);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get user's location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -44,8 +40,7 @@ export function ReportForm({ campaignId, qrCode }: ReportFormProps) {
             lng: position.coords.longitude
           });
         },
-        (error) => {
-          console.error('Location error:', error);
+        () => {
           setLocationError('Unable to get your location. Please enable location services.');
         }
       );
@@ -54,16 +49,71 @@ export function ReportForm({ campaignId, qrCode }: ReportFormProps) {
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  useEffect(() => {
+    if (!qrCode) return;
 
-    // Simulate API call
-    setTimeout(() => {
+    async function lookupCampaign() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('campaigns')
+        .select('id, name')
+        .eq('qr_code', qrCode)
+        .eq('status', 'active')
+        .single();
+
+      if (data) {
+        setCampaignId(data.id);
+        setCampaignName(data.name);
+      }
+    }
+    lookupCampaign();
+  }, [qrCode]);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!location) return;
+
+    setIsSubmitting(true);
+    const formData = new FormData(e.currentTarget);
+
+    const supabase = createClient();
+
+    let resolvedCampaignId = campaignId;
+
+    if (!resolvedCampaignId && qrCode) {
+      const { data } = await supabase
+        .from('campaigns')
+        .select('id')
+        .eq('qr_code', qrCode)
+        .eq('status', 'active')
+        .single();
+      resolvedCampaignId = data?.id || null;
+    }
+
+    if (!resolvedCampaignId) {
+      toast.error('Could not find the associated campaign.');
       setIsSubmitting(false);
-      setIsSubmitted(true);
-      toast.success('Report submitted successfully!');
-    }, 1500);
+      return;
+    }
+
+    const { error } = await supabase.from('reports').insert({
+      campaign_id: resolvedCampaignId,
+      description: (formData.get('description') as string) || null,
+      reporter_email: (formData.get('email') as string) || null,
+      reporter_phone: (formData.get('phone') as string) || null,
+      location_lat: location.lat,
+      location_lng: location.lng,
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      toast.error('Failed to submit report. Please try again.');
+      return;
+    }
+
+    setIsSubmitted(true);
+    toast.success('Report submitted successfully!');
   };
 
   if (isSubmitted) {
@@ -80,20 +130,10 @@ export function ReportForm({ campaignId, qrCode }: ReportFormProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <div className="space-y-4">
-              <div className="p-4 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-800">
-                  Your report has been received and a gig worker will be notified to remove the sign.
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-600">
-                  Want to help more? Consider becoming a gig worker!
-                </p>
-                <Button className="mt-3" variant="outline">
-                  Learn More
-                </Button>
-              </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <p className="text-sm text-green-800">
+                Your report has been received and a gig worker will be notified to remove the sign.
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -109,21 +149,25 @@ export function ReportForm({ campaignId, qrCode }: ReportFormProps) {
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Zap className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">SmartSign</span>
+            <span className="text-xl font-bold text-gray-900">QwikUp Signs</span>
           </div>
           <CardTitle className="text-2xl">Report Expired Sign</CardTitle>
           <CardDescription>
             Help keep our community clean by reporting expired signs
           </CardDescription>
-          {qrCode && (
+          {campaignName && (
             <Badge className="w-fit mx-auto mt-3">
-              Campaign: {qrCode}
+              Campaign: {campaignName}
+            </Badge>
+          )}
+          {qrCode && !campaignName && (
+            <Badge variant="outline" className="w-fit mx-auto mt-3">
+              QR: {qrCode}
             </Badge>
           )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Location Status */}
             <div className="p-4 bg-blue-50 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <MapPin className="w-4 h-4 text-blue-600" />
@@ -146,61 +190,36 @@ export function ReportForm({ campaignId, qrCode }: ReportFormProps) {
               )}
             </div>
 
-            {/* Description */}
             <div>
               <Label htmlFor="description">Description (Optional)</Label>
               <Textarea
                 id="description"
+                name="description"
                 placeholder="Describe the sign condition or location details..."
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
                 className="mt-1"
                 rows={3}
               />
             </div>
 
-            {/* Contact Information */}
             <div>
               <Label className="text-sm font-medium mb-3 block">Contact Information (Optional)</Label>
               <div className="space-y-3">
                 <div>
                   <Label htmlFor="email" className="text-sm text-gray-600">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  />
+                  <Input id="email" name="email" type="email" placeholder="your@email.com" />
                 </div>
                 <div>
                   <Label htmlFor="phone" className="text-sm text-gray-600">Phone</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="(555) 123-4567"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  />
+                  <Input id="phone" name="phone" type="tel" placeholder="(555) 123-4567" />
                 </div>
               </div>
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting || !location}
-            >
+            <Button type="submit" className="w-full" disabled={isSubmitting || !location}>
               {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Submitting Report...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting Report...</>
               ) : (
-                <>
-                  <AlertTriangle className="w-4 h-4 mr-2" />
-                  Submit Report
-                </>
+                <><AlertTriangle className="w-4 h-4 mr-2" /> Submit Report</>
               )}
             </Button>
           </form>
@@ -212,9 +231,9 @@ export function ReportForm({ campaignId, qrCode }: ReportFormProps) {
               Reports are processed by our community of gig workers
             </p>
             <div className="flex justify-center gap-4 text-xs text-gray-500">
-              <span>• Anonymous reporting</span>
-              <span>• GPS verification</span>
-              <span>• Fast response</span>
+              <span>Anonymous reporting</span>
+              <span>GPS verification</span>
+              <span>Fast response</span>
             </div>
           </div>
         </CardContent>

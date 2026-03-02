@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowRight, MapPin, QrCode, DollarSign, Shield, Users, Zap, CheckCircle, Star } from 'lucide-react';
+import { ArrowRight, MapPin, QrCode, DollarSign, Shield, Users, Zap, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export function LandingPage() {
@@ -25,7 +25,7 @@ export function LandingPage() {
     {
       icon: <DollarSign className="w-8 h-8 text-orange-600" />,
       title: 'Automated Payouts',
-      description: 'Stripe-powered instant payments for verified sign cleanup bounties.'
+      description: 'Instant payments for verified sign cleanup bounties.'
     },
     {
       icon: <Shield className="w-8 h-8 text-purple-600" />,
@@ -83,7 +83,7 @@ export function LandingPage() {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-gray-900">SmartSign</span>
+              <span className="text-xl font-bold text-gray-900">QwikUp Signs</span>
             </div>
             <nav className="hidden md:flex items-center gap-6">
               <Link href="#features" className="text-gray-600 hover:text-blue-600 transition-colors">
@@ -91,9 +91,6 @@ export function LandingPage() {
               </Link>
               <Link href="#how-it-works" className="text-gray-600 hover:text-blue-600 transition-colors">
                 How It Works
-              </Link>
-              <Link href="#pricing" className="text-gray-600 hover:text-blue-600 transition-colors">
-                Pricing
               </Link>
             </nav>
             <div className="flex items-center gap-3">
@@ -112,7 +109,7 @@ export function LandingPage() {
       <section className="py-20 px-4">
         <div className="container mx-auto text-center">
           <Badge className="mb-6 px-4 py-2 bg-blue-100 text-blue-700 border-blue-200">
-            Revolutionary Sign Management Platform
+            Community-Driven Sign Management
           </Badge>
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
             Clean Cities Through
@@ -131,7 +128,7 @@ export function LandingPage() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="px-8 py-6 text-lg" asChild>
-              <Link href="/worker/signup">
+              <Link href="/auth/signup">
                 Become a Gig Worker
               </Link>
             </Button>
@@ -178,11 +175,10 @@ export function LandingPage() {
               How It Works
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Choose your role and see how SmartSign makes sign management simple and rewarding.
+              Choose your role and see how QwikUp Signs makes sign management simple and rewarding.
             </p>
           </div>
 
-          {/* Role Tabs */}
           <div className="flex justify-center mb-12">
             <div className="bg-white rounded-xl p-2 shadow-lg">
               {userRoles.map((role) => (
@@ -201,7 +197,6 @@ export function LandingPage() {
             </div>
           </div>
 
-          {/* Active Role Content */}
           {userRoles.map((role) => (
             activeTab === role.id && (
               <Card key={role.id} className="max-w-4xl mx-auto shadow-xl">
@@ -246,96 +241,35 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-20 px-4 bg-blue-600 text-white">
-        <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold mb-2">10K+</div>
-              <div className="text-blue-100">Signs Cleaned</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">500+</div>
-              <div className="text-blue-100">Active Campaigns</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">2K+</div>
-              <div className="text-blue-100">Gig Workers</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">98%</div>
-              <div className="text-blue-100">Compliance Rate</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-green-600 text-white">
         <div className="container mx-auto text-center">
           <h2 className="text-4xl font-bold mb-6">Ready to Transform Your City?</h2>
           <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
-            Join thousands of sign owners and gig workers who are already making cities cleaner and more compliant.
+            Join sign owners and gig workers who are making cities cleaner and more compliant.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="px-8 py-6 text-lg bg-white text-blue-600 hover:bg-gray-100" asChild>
-              <Link href="/auth/signup">
-                Get Started Now
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="px-8 py-6 text-lg border-white text-white hover:bg-white hover:text-blue-600" asChild>
-              <Link href="/demo">
-                Schedule Demo
-              </Link>
-            </Button>
-          </div>
+          <Button size="lg" className="px-8 py-6 text-lg bg-white text-blue-600 hover:bg-gray-100" asChild>
+            <Link href="/auth/signup">
+              Get Started Now
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </Link>
+          </Button>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="py-12 px-4 bg-gray-900 text-white">
         <div className="container mx-auto">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold">SmartSign</span>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <Zap className="w-5 h-5 text-white" />
               </div>
-              <p className="text-gray-400">
-                Revolutionizing sign management through community-driven solutions.
-              </p>
+              <span className="text-xl font-bold">QwikUp Signs</span>
             </div>
-            <div>
-              <h4 className="font-semibold mb-4">Platform</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/features" className="hover:text-white transition-colors">Features</Link></li>
-                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link href="/demo" className="hover:text-white transition-colors">Demo</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
-                <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
-                <li><Link href="/api" className="hover:text-white transition-colors">API Docs</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Company</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/about" className="hover:text-white transition-colors">About</Link></li>
-                <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link></li>
-              </ul>
-            </div>
-          </div>
-          <Separator className="my-8 bg-gray-800" />
-          <div className="text-center text-gray-400">
-            <p>&copy; 2025 SmartSign. All rights reserved.</p>
+            <p className="text-gray-400 text-sm">
+              &copy; 2026 QwikUp Signs. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>

@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'SmartSign - Clean City Initiative',
+  title: 'QwikUp Signs - Clean City Initiative',
   description: 'Revolutionary platform for managing sign cleanup through community-driven bounties and GPS tracking.',
   keywords: 'sign cleanup, bounty platform, gig work, city management, compliance',
 };

@@ -1,46 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Mail, Lock, User, Building, MapPin, Phone, Zap, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Building, Phone, Zap, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
+import { login, signup } from '@/app/auth/actions';
 
 interface AuthFormProps {
   mode: 'login' | 'signup';
 }
 
 export function AuthForm({ mode }: AuthFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const [userType, setUserType] = useState<'owner' | 'worker'>('owner');
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      if (mode === 'login') {
-        router.push(userType === 'owner' ? '/dashboard' : '/worker/dashboard');
-      } else {
-        router.push('/auth/login');
+  const handleSubmit = async (formData: FormData) => {
+    setError(null);
+    formData.set('role', userType);
+    if (redirectPath) {
+      formData.set('redirect', redirectPath);
+    }
+
+    startTransition(async () => {
+      const result = mode === 'login' ? await login(formData) : await signup(formData);
+      if (result?.error) {
+        setError(result.error);
       }
-    }, 1500);
+    });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Header */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 mb-4 text-blue-600 hover:text-blue-700 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -50,13 +50,13 @@ export function AuthForm({ mode }: AuthFormProps) {
             <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">SmartSign</span>
+            <span className="text-2xl font-bold text-gray-900">QwikUp Signs</span>
           </div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {mode === 'login' ? 'Welcome Back' : 'Get Started'}
           </h1>
           <p className="text-gray-600">
-            {mode === 'login' 
+            {mode === 'login'
               ? 'Sign in to your account to continue'
               : 'Create your account to start managing signs'
             }
@@ -69,7 +69,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               {mode === 'login' ? 'Sign In' : 'Create Account'}
             </CardTitle>
             <CardDescription>
-              {mode === 'login' 
+              {mode === 'login'
                 ? 'Enter your credentials to access your account'
                 : 'Fill in your details to get started'
               }
@@ -88,7 +88,13 @@ export function AuthForm({ mode }: AuthFormProps) {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <form action={handleSubmit} className="space-y-4">
               {mode === 'signup' && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
@@ -98,6 +104,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                         <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                         <Input
                           id="firstName"
+                          name="firstName"
                           type="text"
                           placeholder="John"
                           className="pl-10"
@@ -111,6 +118,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                         <User className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                         <Input
                           id="lastName"
+                          name="lastName"
                           type="text"
                           placeholder="Turner"
                           className="pl-10"
@@ -122,15 +130,15 @@ export function AuthForm({ mode }: AuthFormProps) {
 
                   {userType === 'owner' && (
                     <div>
-                      <Label htmlFor="company">Company Name</Label>
+                      <Label htmlFor="companyName">Company Name</Label>
                       <div className="relative">
                         <Building className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                         <Input
-                          id="company"
+                          id="companyName"
+                          name="companyName"
                           type="text"
                           placeholder="Your Company"
                           className="pl-10"
-                          required
                         />
                       </div>
                     </div>
@@ -142,10 +150,10 @@ export function AuthForm({ mode }: AuthFormProps) {
                       <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                       <Input
                         id="phone"
+                        name="phone"
                         type="tel"
                         placeholder="(555) 123-4567"
                         className="pl-10"
-                        required
                       />
                     </div>
                   </div>
@@ -158,6 +166,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                   <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     placeholder="john@example.com"
                     className="pl-10"
@@ -172,10 +181,12 @@ export function AuthForm({ mode }: AuthFormProps) {
                   <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                   <Input
                     id="password"
+                    name="password"
                     type="password"
                     placeholder="••••••••"
                     className="pl-10"
                     required
+                    minLength={6}
                   />
                 </div>
               </div>
@@ -187,10 +198,12 @@ export function AuthForm({ mode }: AuthFormProps) {
                     <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                     <Input
                       id="confirmPassword"
+                      name="confirmPassword"
                       type="password"
-                      placeholder="john.turner@example.com"
+                      placeholder="••••••••"
                       className="pl-10"
                       required
+                      minLength={6}
                     />
                   </div>
                 </div>
@@ -199,9 +212,9 @@ export function AuthForm({ mode }: AuthFormProps) {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoading}
+                disabled={isPending}
               >
-                {isLoading ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+                {isPending ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
               </Button>
             </form>
 
@@ -210,7 +223,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               <div className="text-center text-sm text-gray-600">
                 {mode === 'login' ? (
                   <>
-                    Don't have an account?{' '}
+                    Don&apos;t have an account?{' '}
                     <Link href="/auth/signup" className="text-blue-600 hover:text-blue-700 font-medium">
                       Sign up
                     </Link>

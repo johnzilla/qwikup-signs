@@ -1,85 +1,95 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Bell, 
-  Settings, 
-  LogOut, 
-  User, 
-  CreditCard, 
-  HelpCircle, 
-  Zap 
+import {
+  Bell,
+  Settings,
+  LogOut,
+  User,
+  CreditCard,
+  HelpCircle,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { logout } from '@/app/auth/actions';
+interface Profile {
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+}
 
 interface DashboardHeaderProps {
   userType: 'owner' | 'worker';
 }
 
 export function DashboardHeader({ userType }: DashboardHeaderProps) {
-  const [notifications] = useState(3);
-  const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [notifications] = useState(0);
 
-  const handleLogout = () => {
-    router.push('/');
-  };
+  useEffect(() => {
+    async function loadProfile() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (data) setProfile(data);
+    }
+    loadProfile();
+  }, []);
+
+  const initials = profile
+    ? `${profile.first_name[0]}${profile.last_name[0]}`
+    : '??';
 
   return (
     <header className="bg-white border-b sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <Zap className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">SmartSign</span>
+            <span className="text-xl font-bold text-gray-900">QwikUp Signs</span>
           </Link>
 
-          {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link 
+            <Link
               href={userType === 'owner' ? '/dashboard' : '/worker/dashboard'}
               className="text-gray-600 hover:text-blue-600 transition-colors"
             >
               Dashboard
             </Link>
             {userType === 'owner' ? (
-              <>
-                <Link href="/dashboard/campaigns" className="text-gray-600 hover:text-blue-600 transition-colors">
-                  Campaigns
-                </Link>
-                <Link href="/dashboard/analytics" className="text-gray-600 hover:text-blue-600 transition-colors">
-                  Analytics
-                </Link>
-              </>
+              <Link href="/dashboard/campaigns" className="text-gray-600 hover:text-blue-600 transition-colors">
+                Campaigns
+              </Link>
             ) : (
-              <>
-                <Link href="/worker/map" className="text-gray-600 hover:text-blue-600 transition-colors">
-                  Map
-                </Link>
-                <Link href="/worker/earnings" className="text-gray-600 hover:text-blue-600 transition-colors">
-                  Earnings
-                </Link>
-              </>
+              <Link href="/worker/earnings" className="text-gray-600 hover:text-blue-600 transition-colors">
+                Earnings
+              </Link>
             )}
           </nav>
 
-          {/* Right side */}
           <div className="flex items-center gap-4">
-            {/* Notifications */}
             <Button variant="ghost" size="sm" className="relative">
               <Bell className="w-5 h-5" />
               {notifications > 0 && (
@@ -89,22 +99,22 @@ export function DashboardHeader({ userType }: DashboardHeaderProps) {
               )}
             </Button>
 
-            {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarFallback>{initials}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">John Turner</p>
+                    <p className="text-sm font-medium leading-none">
+                      {profile ? `${profile.first_name} ${profile.last_name}` : 'Loading...'}
+                    </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      john.turner@example.com
+                      {profile?.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -126,7 +136,11 @@ export function DashboardHeader({ userType }: DashboardHeaderProps) {
                   <span>Help</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    await logout();
+                  }}
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>

@@ -1,11 +1,12 @@
 import { ReportForm } from '@/components/public/report-form';
 
 interface ReportPageProps {
-  params: {
+  params: Promise<{
     qrCode: string;
-  };
+  }>;
 }
 
-export default function QRReportPage({ params }: ReportPageProps) {
-  return <ReportForm qrCode={params.qrCode} />;
+export default async function QRReportPage({ params }: ReportPageProps) {
+  const { qrCode } = await params;
+  return <ReportForm qrCode={qrCode} />;
 }

@@ -1,247 +1,180 @@
-# SmartSign - Smart Sign Cleanup & Bounty Platform
+# QwikUp Signs - Sign Cleanup & Bounty Platform
 
-A revolutionary platform that transforms sign cleanup into a community-driven initiative through GPS tracking, QR codes, and automated bounty payments.
+A platform that transforms sign cleanup into a community-driven initiative through GPS tracking, QR codes, and bounty payments.
 
-## 🚀 Project Overview
+## Overview
 
-SmartSign is a comprehensive web application that connects sign owners, gig workers, and the public to maintain clean, compliant communities. The platform uses modern web technologies to provide real-time tracking, automated payments, and seamless user experiences.
+QwikUp Signs connects sign owners, gig workers, and the public to maintain clean, compliant communities. Sign owners create campaigns with bounties, the public reports expired signs via QR codes, and gig workers claim and complete sign removal for payment.
 
-### Key Features
+### Features
 
-- **Multi-Role System**: Sign owners, gig workers, and public users
-- **GPS Tracking**: Precise location tracking for all sign activities
-- **QR Code Generation**: Unique codes for each campaign
-- **Bounty System**: Automated payments for verified sign cleanup
-- **Real-Time Dashboard**: Analytics and compliance monitoring
-- **Photo Verification**: Proof of pickup and removal
-- **Mobile-First Design**: Responsive across all devices
+- **Multi-role system** -- sign owners, gig workers, and public reporters
+- **GPS tracking** -- precise location for deployment, reporting, and pickup verification
+- **QR code generation** -- unique downloadable QR codes per campaign
+- **Bounty system** -- campaign-level bounty amounts for sign cleanup
+- **Photo verification** -- proof of pickup via Supabase Storage
+- **Form validation** -- zod schemas for all user inputs
+- **Auth middleware** -- protected routes with role-based redirects
+- **Mobile-first** -- responsive design with camera capture support
 
-## 🛠 Tech Stack
+## Tech Stack
 
-- **Frontend**: Next.js 13+ with App Router, TypeScript, Tailwind CSS
-- **UI Components**: shadcn/ui with Radix UI primitives
+- **Framework**: Next.js 15 (App Router), React 19, TypeScript 5.9
+- **Styling**: Tailwind CSS 3.4, shadcn/ui components
 - **Database**: Supabase PostgreSQL with Row Level Security
-- **Authentication**: Supabase Auth with email/password
-- **File Storage**: Supabase Storage for photo uploads
-- **Payments**: Stripe Connect for gig worker payouts
-- **Deployment**: Ready for Vercel or Netlify
+- **Auth**: Supabase Auth (email/password) via `@supabase/ssr`
+- **Storage**: Supabase Storage for proof photos
+- **Validation**: Zod
+- **Payments**: Stripe Connect (planned, not yet wired up)
 
-## 📋 User Roles
-
-### Sign Owners
-- Create and manage sign campaigns
-- Generate unique QR codes for each campaign
-- Track sign deployment with GPS coordinates
-- Monitor compliance and removal statistics
-- Set bounty amounts for sign cleanup
-
-### Gig Workers
-- Browse available sign cleanup bounties
-- Claim signs on interactive map
-- Upload photo proof of pickup
-- Verify drop-off locations
-- Receive automated payments via Stripe
-
-### Public Users
-- Scan QR codes on expired signs
-- Submit reports with GPS location
-- Help maintain community cleanliness
-- No account registration required
-
-## 🏗 Project Structure
+## Project Structure
 
 ```
-/
-├── app/                    # Next.js app directory
-│   ├── auth/              # Authentication pages
-│   ├── dashboard/         # Owner dashboard
-│   ├── worker/            # Gig worker interface
-│   └── report/            # Public reporting
-├── components/            # React components
-│   ├── ui/               # shadcn/ui components
-│   ├── auth/             # Authentication forms
-│   ├── dashboard/        # Dashboard components
-│   ├── worker/           # Worker interface
-│   ├── landing/          # Landing page
-│   └── public/           # Public forms
-├── lib/                  # Utility functions
-├── supabase/            # Database schema and config
-│   └── migrations/      # SQL migration files
-└── public/              # Static assets
+├── app/
+│   ├── auth/
+│   │   ├── login/page.tsx       # Login page
+│   │   ├── signup/page.tsx      # Signup page
+│   │   └── actions.ts           # Server actions (login, signup, logout)
+│   ├── dashboard/page.tsx       # Owner dashboard
+│   ├── worker/dashboard/page.tsx # Worker dashboard
+│   ├── report/
+│   │   ├── page.tsx             # Generic report form
+│   │   └── [qrCode]/page.tsx   # QR-linked report form
+│   ├── layout.tsx
+│   ├── loading.tsx
+│   ├── error.tsx
+│   └── not-found.tsx
+├── components/
+│   ├── ui/                      # shadcn/ui primitives
+│   ├── auth/auth-form.tsx       # Login/signup form
+│   ├── dashboard/
+│   │   ├── owner-dashboard.tsx  # Campaign management + stats
+│   │   ├── dashboard-header.tsx # Nav + user menu + logout
+│   │   └── qr-code-dialog.tsx   # QR code viewer/download
+│   ├── worker/
+│   │   ├── worker-dashboard.tsx # Bounties, claims, history
+│   │   └── photo-upload.tsx     # Camera/file upload component
+│   ├── landing/landing-page.tsx
+│   └── public/report-form.tsx   # Public sign report form
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts            # Browser Supabase client
+│   │   ├── server.ts            # Server Supabase client
+│   │   └── middleware.ts        # Session refresh + route protection
+│   ├── database.types.ts        # Full typed schema (6 tables)
+│   ├── validations.ts           # Zod schemas
+│   ├── qr-generator.ts          # QR code generation
+│   └── utils.ts                 # Tailwind cn() helper
+├── supabase/
+│   ├── config.toml              # Local Supabase config
+│   └── migrations/
+│       ├── 20250704171535_wispy_grass.sql  # Core schema + RLS
+│       └── 20260301000000_add_storage_bucket.sql # Photo storage
+├── middleware.ts                 # Next.js middleware (auth guard)
+└── .env.local.example           # Environment variable template
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and npm
-- Supabase account and project
-- Stripe account for payments
-- Git for version control
+- Node.js 18+
+- A Supabase project (cloud or self-hosted)
+- Git
 
-### Installation
+### Setup
 
-1. **Clone the repository**
+1. **Clone and install**
    ```bash
-   git clone https://github.com/yourusername/smartsign-platform.git
-   cd smartsign-platform
+   git clone https://github.com/qwikup-signs/qwikup-signs.git
+   cd qwikup-signs
+   npm install --legacy-peer-deps
    ```
 
-2. **Install dependencies**
+2. **Configure environment**
    ```bash
-   npm install
+   cp .env.local.example .env.local
+   ```
+   Fill in your Supabase URL and anon key. Stripe keys are optional for now.
+
+3. **Run Supabase migrations**
+   Apply the SQL files in `supabase/migrations/` to your Supabase project, either via the Supabase dashboard SQL editor or the Supabase CLI:
+   ```bash
+   supabase db push
    ```
 
-3. **Set up environment variables**
-   Create a `.env.local` file in the root directory:
-   ```env
-   # Supabase Configuration
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-
-   # Stripe Configuration
-   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-   STRIPE_SECRET_KEY=your_stripe_secret_key
-   STRIPE_WEBHOOK_SECRET=your_webhook_secret
-
-   # App Configuration
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   ```
-
-4. **Set up Supabase**
-   - Create a new Supabase project
-   - Run the migration files in `supabase/migrations/`
-   - Configure authentication settings
-   - Set up storage bucket for photos
-
-5. **Configure Stripe**
-   - Create a Stripe account
-   - Set up Stripe Connect for marketplace payments
-   - Configure webhook endpoints
-
-6. **Run the development server**
+4. **Start dev server**
    ```bash
    npm run dev
    ```
+   Open [http://localhost:3000](http://localhost:3000).
 
-7. **Open your browser**
-   Navigate to `http://localhost:3000`
+## Database Schema
 
-## 🗄 Database Schema
+Six tables with RLS enabled on all:
 
-### Core Tables
+| Table | Purpose |
+|-------|---------|
+| `profiles` | User profiles linked to `auth.users`, with role (`owner`/`worker`) |
+| `campaigns` | Sign campaigns with bounty amounts and QR codes |
+| `sign_pins` | Individual sign locations with status tracking |
+| `reports` | Public reports of expired signs with GPS coordinates |
+| `claims` | Worker claims on bounties with pickup/dropoff verification |
+| `payouts` | Payment records (pending Stripe integration) |
 
-- **profiles**: User profiles and role management
-- **campaigns**: Sign campaigns created by owners
-- **sign_pins**: Individual sign locations and tracking
-- **reports**: Public reports of expired signs
-- **claims**: Gig worker claims on bounties
-- **payouts**: Payment records and transactions
+Custom enums: `user_role`, `campaign_status`, `sign_status`, `claim_status`, `payout_status`.
 
-### Key Features
+## User Roles
 
-- Row Level Security (RLS) for data protection
-- Automatic timestamps and triggers
-- Indexed fields for performance
-- Proper foreign key relationships
-- Custom enum types for status tracking
+**Sign Owners** -- create campaigns, set bounty amounts, generate QR codes, view deployment/removal stats.
 
-## 💳 Payment Integration
+**Gig Workers** -- browse available bounties, claim signs, upload photo proof of pickup, track earnings.
 
-The platform uses Stripe Connect to handle marketplace payments:
+**Public Users** -- scan QR codes on expired signs, submit reports with GPS location. No account required.
 
-1. **Sign owners** pay platform fees
-2. **Gig workers** receive payouts minus service fees
-3. **Automated processing** after photo verification
-4. **Secure transactions** with fraud protection
-
-## 📱 Mobile Experience
-
-- **Progressive Web App** capabilities
-- **GPS integration** for location tracking
-- **Camera access** for photo verification
-- **Offline support** for core features
-- **Push notifications** for updates
-
-## 🔒 Security Features
-
-- **Row Level Security** in Supabase
-- **Role-based access control**
-- **Secure file uploads** with validation
-- **GPS verification** for authenticity
-- **Photo proof** requirements
-- **Encrypted payment processing**
-
-## 📈 Analytics & Monitoring
-
-- **Real-time dashboards** for all user types
-- **Compliance tracking** and reporting
-- **Performance metrics** and KPIs
-- **User activity** monitoring
-- **Financial reporting** for payouts
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-
-1. **Connect your repository** to Vercel
-2. **Set environment variables** in Vercel dashboard
-3. **Configure build settings**:
-   - Build command: `npm run build`
-   - Output directory: `.next`
-4. **Deploy** automatically on git push
-
-### Netlify
-
-1. **Connect your repository** to Netlify
-2. **Set build command**: `npm run build`
-3. **Set publish directory**: `out`
-4. **Configure environment variables**
-5. **Deploy** your site
-
-## 📋 Environment Variables
+## Environment Variables
 
 ```env
-# Supabase
+# Required
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+
+# Optional (for admin/server operations)
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Stripe
+# Optional (Stripe -- not yet wired up)
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 
 # App
-NEXT_PUBLIC_APP_URL=https://your-domain.com
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-## 🤝 Contributing
+## Deployment
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Vercel (Recommended)
 
-## 📄 License
+1. Connect your repository to Vercel
+2. Set environment variables in the Vercel dashboard
+3. Deploy -- build command is `npm run build`, output is `.next`
 
-This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
+### DigitalOcean / Self-hosted
 
-## 🔮 Roadmap
+1. Build: `npm run build`
+2. Start: `npm start`
+3. Set environment variables on the host
+4. Point your Supabase config to your self-hosted instance
 
-- [ ] Mobile app development (React Native)
+## Roadmap
+
+- [ ] Stripe Connect integration for worker payouts
+- [ ] Interactive map view (Leaflet/Mapbox) for sign pins
+- [ ] Real-time notifications via Supabase Realtime
+- [ ] Mobile app (React Native)
 - [ ] Advanced analytics and reporting
 - [ ] Multi-language support
-- [ ] API for third-party integrations
-- [ ] Machine learning for sign detection
-- [ ] Blockchain integration for transparency
 
-## 📞 Support
+## License
 
-For support, email john.turner@smartsign.com or join our community Discord.
-
----
-
-**SmartSign** - Transforming communities through smart sign management 🌟
+Apache License 2.0 -- see [LICENSE](LICENSE).
